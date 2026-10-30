@@ -59,7 +59,6 @@ jobs:
     name: Deploy to Server (CD)
     needs: build-and-test
     runs-on: ubuntu-latest
-    # Deployment läuft nur bei Push auf den 'main'-Branch
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -68,22 +67,29 @@ jobs:
         with:
           name: server-binary
 
-      - name: 🚀 Copy binary to server via SCP
+      - name: 🚀 Copy binary to home directory via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "server-binary"
-          target: "/opt/zgowebseit/"
+          target: "./" # Kopiert es ins Home-Verzeichnis des Users (z.B. /home/sair/)
 
-      - name: 🔄 Set permissions & restart systemd service via SSH
+      - name: 🔄 Move binary to /opt, set permissions & restart service
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            chmod +x /opt/zgowebseit/server-binary
+            # Ordner erstellen, falls nicht vorhanden
+            sudo mkdir -p /opt/zgowebseit
+            
+            # Binary an den zielort verschieben
+            sudo mv server-binary /opt/zgowebseit/server-binary
+            
+            # Rechte anpassen und Dienst neustarten
+            sudo chmod +x /opt/zgowebseit/server-binary
             sudo systemctl restart zgowebseit
             echo "Deployment erfolgreich abgeschlossen!"
