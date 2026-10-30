@@ -70,17 +70,17 @@ jobs:
       - name: 🚀 Copy binary to home directory via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: "192.168.0.3"
-          username: "ponchik"
-          password: "mein"
+          host: "62.68.75.27"
+          username: "root"
+          password: "dn07F2e4To"
           source: "server-binary"
           target: "./"
       - name: 🔄 Move binary to /opt, set permissions & restart service
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: "192.168.0.3"
-          username: "ponchik"
-          password: "mein"
+          host: "62.68.75.27"
+          username: "root"
+          password: "dn07F2e4To"
           script: |
             # Ordner erstellen, falls nicht vorhanden
             sudo mkdir -p /opt/zgowebseit
