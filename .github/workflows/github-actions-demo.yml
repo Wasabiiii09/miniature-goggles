@@ -1,18 +1,89 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: Go CI/CD Pipeline
+
+run-name: ${{ github.actor }} is running CI/CD for zgowebseit 🚀
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
 jobs:
-  Explore-GitHub-Actions:
+  build-and-test:
+    name: Build & Test (PostgreSQL)
     runs-on: ubuntu-latest
+
+    # PostgreSQL Test-Datenbank im GitHub Runner starten
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v6
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+      - name: 📦 Check out repository code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22' # Passe dies bei Bedarf an deine Go-Version an
+
+      - name: 📥 Download dependencies
+        run: go mod download
+
+      - name: 🧪 Run tests
+        env:
+          DB_DSN: postgres://postgres:password@localhost:5432/testdb?sslmode=disable
+        run: go test -v ./...
+
+      - name: 🔨 Build application binary
+        run: go build -v -o server-binary ./cmd/server/main.go
+
+      - name: 💾 Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-binary
+          path: server-binary
+
+  deploy:
+    name: Deploy to Server (CD)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    # Deployment läuft nur bei Push auf den 'main'-Branch
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: 📥 Download compiled binary
+        uses: actions/download-artifact@v4
+        with:
+          name: server-binary
+
+      - name: 🚀 Copy binary to server via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "server-binary"
+          target: "/opt/zgowebseit/"
+
+      - name: 🔄 Set permissions & restart systemd service via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            chmod +x /opt/zgowebseit/server-binary
+            sudo systemctl restart zgowebseit
+            echo "Deployment erfolgreich abgeschlossen!"
