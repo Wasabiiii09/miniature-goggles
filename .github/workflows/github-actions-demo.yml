@@ -1,19 +1,23 @@
-name: Go CI/CD Pipeline
+name: Go CI/CD with Docker
 
-run-name: ${{ github.actor }} is running CI/CD for zgowebseit 🚀
+run-name: ${{ github.actor }} is running Docker CI/CD for zgowebseit 🚀
 
 on:
+
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-test:
     name: Build & Test (PostgreSQL)
     runs-on: ubuntu-latest
 
-    # PostgreSQL Test-Datenbank im GitHub Runner starten
     services:
       postgres:
         image: postgres:15-alpine
@@ -36,7 +40,7 @@ jobs:
       - name: ⚙️ Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.27.2' # Passe dies bei Bedarf an deine Go-Version an
+          go-version: '1.27.2'
 
       - name: 📥 Download dependencies
         run: go mod download
@@ -46,49 +50,74 @@ jobs:
           DB_DSN: postgres://postgres:password@localhost:5432/testdb?sslmode=disable
         run: go test -v ./...
 
-      - name: 🔨 Build application binary
-        run: go build -v -o server-binary ./cmd/server/main.go
+  docker-build-and-push:
+    name: Build & Push Docker Image
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
-      - name: 💾 Upload Build Artifact
-        uses: actions/upload-artifact@v4
+    steps:
+      - name: 📦 Check out repository code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Log in to the Container Registry
+        uses: docker/login-action@v3
         with:
-          name: server-binary
-          path: server-binary
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: 🚀 Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   deploy:
-    name: Deploy to Server (CD)
-    needs: build-and-test
+    name: Deploy Docker to VPS
+    needs: docker-build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-      - name: 📥 Download compiled binary
-        uses: actions/download-artifact@v4
-        with:
-          name: server-binary
-
-      - name: 🚀 Copy binary to home directory via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: "62.68.75.27"
-          username: "root"
-          password: "dn07F2e4To"
-          source: "server-binary"
-          target: "./"
-      - name: 🔄 Move binary to /opt, set permissions & restart service
+      - name: 🚀 Pull and Restart Container on VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: "62.68.75.27"
           username: "root"
           password: "dn07F2e4To"
           script: |
-            # Ordner erstellen, falls nicht vorhanden
-            sudo mkdir -p /opt/zgowebseit
+            # Bei GitHub Container Registry anmelden (falls das Repo privat ist, sonst geht es auch ohne Login)
+            # docker login ghcr.io -u GITHUB_USER -p GITHUB_TOKEN
             
-            # Binary an den Zielort verschieben (aus dem Home-Verzeichnis)
-            sudo mv server-binary /opt/zgowebseit/server-binary
+            # Neuestes Image herunterladen
+            # (Hinweis: Wandle den Imagenamen in Kleinbuchstaben um falls nötig, z.B. wasabiiii09)
+            IMAGE="ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'):latest"
             
-            # Rechte anpassen und Dienst neustarten
-            sudo chmod +x /opt/zgowebseit/server-binary
-            sudo systemctl restart zgowebseit
-            echo "Deployment erfolgreich abgeschlossen!"
+            docker pull $IMAGE
+            
+            # Alten Container stoppen und löschen (falls vorhanden)
+            docker stop zgowebseit-container || true
+            docker rm zgowebseit-container || true
+            
+            # Neuen Container starten und an die .env-Datei auf dem VPS binden
+            docker run -d \
+              --name zgowebseit-container \
+              --restart always \
+              -p 7779:7779 \
+              --env-file /opt/zgowebseit/.env \
+              $IMAGE
+              
+            echo "Docker-Deployment erfolgreich abgeschlossen!"
