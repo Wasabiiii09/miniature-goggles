@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kommentar schreiben</title>
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --text-color: #f4f4f4;
+            --muted-color: #8c8c8c;
+            --border-color: #262626;
+            --focus-border: #666666;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            padding: 2.5rem;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            margin-bottom: 2rem;
+            color: var(--text-color);
+            text-transform: uppercase;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            background-color: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 300;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea::placeholder {
+            color: var(--muted-color);
+        }
+
+        textarea:focus {
+            border-color: var(--focus-border);
+        }
+
+        button {
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--text-color);
+            padding: 0.8rem 2.2rem;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            align-self: flex-start;
+        }
+
+        button:hover {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+            transform: translateY(-2px);
+        }
+
+        a {
+            display: inline-block;
+            text-decoration: none;
+            color: var(--muted-color);
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Neuen Kommentar schreiben</h1>
+        <form action="/comment_action" method="POST">
+            <textarea name="comment_text_input" placeholder="Dein Kommentar..." required></textarea>
+            <button type="submit">Abschicken</button>
+        </form>
+        <a href="/">← Zurück</a>
+    </div>
+</body>
+</html>
