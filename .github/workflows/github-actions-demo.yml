@@ -36,7 +36,7 @@ jobs:
       - name: ⚙️ Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22' # Passe dies bei Bedarf an deine Go-Version an
+          go-version: '1.27.2' # Passe dies bei Bedarf an deine Go-Version an
 
       - name: 📥 Download dependencies
         run: go mod download
@@ -70,23 +70,22 @@ jobs:
       - name: 🚀 Copy binary to home directory via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: "192.168.0.3"
+          username: "ponchik"
+          password: "mein"
           source: "server-binary"
-          target: "./" # Kopiert es ins Home-Verzeichnis des Users (z.B. /home/sair/)
-
+          target: "./"
       - name: 🔄 Move binary to /opt, set permissions & restart service
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: "192.168.0.3"
+          username: "ponchik"
+          password: "mein"
           script: |
             # Ordner erstellen, falls nicht vorhanden
             sudo mkdir -p /opt/zgowebseit
             
-            # Binary an den zielort verschieben
+            # Binary an den Zielort verschieben (aus dem Home-Verzeichnis)
             sudo mv server-binary /opt/zgowebseit/server-binary
             
             # Rechte anpassen und Dienst neustarten
