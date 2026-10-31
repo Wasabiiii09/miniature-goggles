@@ -47,7 +47,7 @@ jobs:
 
       - name: 🧪 Run tests
         env:
-          DB_DSN: postgres://postgres:password@localhost:5432/testdb?sslmode=disable
+          DB_DSN: postgres://postgres:kerim197@localhost:5432/postgres?sslmode=disable
         run: go test -v ./...
 
   docker-build-and-push:
