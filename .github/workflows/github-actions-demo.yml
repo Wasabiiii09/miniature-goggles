@@ -22,9 +22,9 @@ jobs:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: testdb
+          POSTGRES_USER: postgrsaires
+          POSTGRES_PASSWORD: kerim197
+          POSTGRES_DB: postgres
         ports:
           - 5432:5432
         options: >-
